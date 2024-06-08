@@ -12,7 +12,7 @@ from models.review import Review
 from models.state import State
 from models.user import User
 
-classes = {"Amenity": Amenity, "BaseModel": BaseModel, "City": City,
+classes = {"Amenity": Amenity, "City": City,
            "Place": Place, "Review": Review, "State": State, "User": User}
 
 
@@ -26,13 +26,14 @@ class FileStorage:
 
     def all(self, cls=None):
         """returns the dictionary __objects"""
-        if cls is not None:
-            new_dict = {}
-            for key, value in self.__objects.items():
-                if cls == value.__class__ or cls == value.__class__.__name__:
-                    new_dict[key] = value
-            return new_dict
-        return self.__objects
+        if not cls:
+            return self.__objects
+        elif type(cls) == str:
+            return {k: v for k, v in self.__objects.items()
+                    if v.__class__.__name__ == cls}
+        else:
+            return {k: v for k, v in self.__objects.items()
+                    if v.__class__ == cls}
 
     def new(self, obj):
         """sets in __objects the obj with key <obj class name>.id"""
@@ -55,7 +56,7 @@ class FileStorage:
                 jo = json.load(f)
             for key in jo:
                 self.__objects[key] = classes[jo[key]["__class__"]](**jo[key])
-        except:
+        except Exception:
             pass
 
     def delete(self, obj=None):
@@ -66,5 +67,34 @@ class FileStorage:
                 del self.__objects[key]
 
     def close(self):
-        """call reload() method for deserializing the JSON file to objects"""
+        """method for deserializing the JSON file to objects"""
         self.reload()
+
+    def get(self, cls, id):
+        """get the obj based on the id
+
+        cls: class
+        id: string representing the object ID
+        Return: Returns the object based on the class and its ID,
+        or None if not found
+        """
+        full_objs_list = self.all(cls)
+        for obj in full_objs_list.values():
+            if obj.id == id:
+                return obj
+        return None
+
+    def count(self, cls=None):
+        """get the count of objs
+
+        cls: class
+        Return: Returns the number of objects in storage
+        matching the given class. If no class is passed,
+        returns the count of all objects in storage.
+        """
+        total = 0
+        if cls:
+            total = len(self.all(cls))
+        else:
+            total = len(self.__objects)
+        return total
